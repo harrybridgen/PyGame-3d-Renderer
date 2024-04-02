@@ -66,6 +66,7 @@ face_colors = [(x,y,z) for x in range(80, 120, 50//len(faces)) for y in range(80
 ]
 
 def add_cube(base_x, base_y, base_z, block_points, block_edges, size=200):
+    '''Add a cube to the block points and edges list at the specified position'''
     adjusted_base_y = base_y
     cube_position_key = (round(base_x / size) * size, round(adjusted_base_y / size) * size, round(base_z / size) * size)
     
@@ -94,6 +95,7 @@ def is_point_on_screen(point, screenWidth, screenHeight):
     return -tolerance <= point[0] <= screenWidth + tolerance and -tolerance <= point[1] <= screenHeight + tolerance
 
 def render_dynamic_ground(camera_pos, yaw, pitch, screenWidth, screenHeight, fov):
+    '''Render the ground squares that are visible to the camera'''
     drawn_squares = 0
     view_distance = grid_size  
     
@@ -133,9 +135,11 @@ def calculate_distance(camera_pos, point):
     return ((camera_pos[0] - point[0]) ** 2 + (camera_pos[1] - point[1]) ** 2 + (camera_pos[2] - point[2]) ** 2) ** 0.5
 
 def to_grid_pos(point):
+    '''Round a point to the nearest grid position'''
     return (round(point[0] / square_size) * square_size, round(point[1] / square_size) * square_size, round(point[2] / square_size) * square_size)
 
 def render_block_faces(block_points, camera_pos, yaw, pitch, screenWidth, screenHeight, fov):
+    '''Render the faces of the blocks that are visible to the camera'''
     drawn_faces = 0
     faces_with_details = []
 
@@ -201,6 +205,7 @@ def project_3d(x, y, z, screen_width, screen_height, fov):
 
 
 def cross_product(v1, v2):
+    '''Calculate the cross product of two vectors'''
     return (
         v1[1] * v2[2] - v1[2] * v2[1],
         v1[2] * v2[0] - v1[0] * v2[2],
@@ -208,6 +213,7 @@ def cross_product(v1, v2):
     )
 
 def transform_point(x, y, z, camera_pos, yaw, pitch, screenWidth, screenHeight, fov):
+    '''Transform a 3D point to 2D screen coordinates'''
     x -= camera_pos[0]
     y -= camera_pos[1]
     z -= camera_pos[2]
@@ -231,6 +237,7 @@ def transform_point(x, y, z, camera_pos, yaw, pitch, screenWidth, screenHeight, 
     return project_3d(x, y, z, screenWidth, screenHeight, fov)
 
 def place_block():
+    '''Place a block in front of the camera'''
     forward_x = math.sin(-yaw)
     forward_z = math.cos(-yaw)
     block_distance = 400  
