@@ -188,7 +188,7 @@ def render_block_faces(block_points, camera_pos, yaw, pitch, screenWidth, screen
         
         if sum(normal[i] * view_vector[i] for i in range(3)) < 0:
             projected_face = [transform_point(*block_points[vertex], camera_pos, yaw, pitch, screenWidth, screenHeight, fov) for vertex in [vertex + block_index * 8 for vertex in face]]
-            if None not in projected_face:
+            if None not in projected_face and any(is_point_on_screen(point, screenWidth, screenHeight) for point in projected_face):
                 pygame.draw.polygon(screen, color, projected_face)
                 pygame.draw.polygon(screen, (0, 0, 0), projected_face, 1)
                 drawn_faces += 1
