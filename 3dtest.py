@@ -53,6 +53,15 @@ faces = [
     [3, 0, 4, 7]  
 ]
 
+direction_vectors = [
+    (0, -1, 0),
+    (0, 1, 0),   
+    (1, 0, 0),  
+    (0, 0, -1),   
+    (-1, 0, 0),  
+    (-0, 0, 1)   
+]
+
 face_colors = [(x,y,z) for x in range(80, 120, 50//len(faces)) for y in range(80, 120, 50//len(faces)) for z in range(80, 120, 50//len(faces))
 ]
 
@@ -79,19 +88,6 @@ def add_cube(base_x, base_y, base_z, block_points, block_edges, size=200):
         block_edges.append((base_index + i, base_index + i + 4))
 
     occupied_positions.add(cube_position_key)
-    
-def add_square(grid_points, grid_edges, bottom_left_x, bottom_left_z, size):
-    start_index = len(grid_points)
-    
-    grid_points.append((bottom_left_x, 0, bottom_left_z))
-    grid_points.append((bottom_left_x + size, 0, bottom_left_z))
-    grid_points.append((bottom_left_x + size, 0, bottom_left_z + size))
-    grid_points.append((bottom_left_x, 0, bottom_left_z + size))
-    
-    grid_edges.append((start_index, start_index + 1))
-    grid_edges.append((start_index + 1, start_index + 2))
-    grid_edges.append((start_index + 2, start_index + 3))
-    grid_edges.append((start_index + 3, start_index))
 
 def is_point_on_screen(point, screenWidth, screenHeight):
     tolerance = 50
@@ -133,23 +129,12 @@ def calculate_centroid(vertices, block_points):
     z = sum(block_points[vertex][2] for vertex in vertices) / len(vertices)
     return (x, y, z)
 
-def is_block_above_or_below(block_position, blocks, height_difference):
-    """Check if there's a block directly above or below the given block."""
-    above_position = (block_position[0], block_position[1] + height_difference, block_position[2])
-    return above_position in blocks
-
 def calculate_distance(camera_pos, point):
     return ((camera_pos[0] - point[0]) ** 2 + (camera_pos[1] - point[1]) ** 2 + (camera_pos[2] - point[2]) ** 2) ** 0.5
+
 def to_grid_pos(point):
     return (round(point[0] / square_size) * square_size, round(point[1] / square_size) * square_size, round(point[2] / square_size) * square_size)
-direction_vectors = [
-    (0, -1, 0),
-    (0, 1, 0),   
-    (1, 0, 0),  
-    (0, 0, -1),   
-    (-1, 0, 0),  
-    (-0, 0, 1)   
-]
+
 def render_block_faces(block_points, camera_pos, yaw, pitch, screenWidth, screenHeight, fov):
     drawn_faces = 0
     faces_with_details = []
