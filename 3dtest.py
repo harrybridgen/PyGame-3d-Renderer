@@ -11,33 +11,33 @@ pygame.mouse.set_visible(False)
 pygame.event.set_grab(True)
 pygame.font.init() 
 
-debug = False
+debug = True
 
 WHITE = (255, 255, 255)
 RED = (255, 0, 0)
 ground_square_color = (10, 180, 10) 
 ground_square_outline_color = (20, 150, 20)  
 
-grid_points = []
-grid_edges = []
-grid_size = 4000 
-square_size = 200
+
 
 block_points = []
 block_edges = []
+render_distance = 3000 
+face_size = 200
 
 occupied_positions = set()
 player_height = 500
-camera_pos = [1000, player_height, -1000]  
-yaw, pitch = 0, -0.1 
+camera_pos = [0, player_height, 0]  
+yaw, pitch = 0, 0 
 fov = 70
 near_clip = 100
-far_clip = grid_size
-smooth_factor = 0.3 
+far_clip = render_distance
+smooth_factor = 0.5
 target_yaw, target_pitch = yaw, pitch
 target_pos = list(camera_pos)
 movement_speed = 1200
-strafe_speed = movement_speed *0.8
+camera_speed = 0.001
+strafe_speed = movement_speed * 0.8
 fov_rad = 1 / math.tan(math.radians(fov) / 2)
 
 font_size = 24
@@ -54,7 +54,7 @@ faces = [
 ]
 
 direction_vectors = [
-    (0, -1, 0),
+    (0, -1, 0), 
     (0, 1, 0),   
     (1, 0, 0),  
     (0, 0, -1),   
@@ -97,22 +97,22 @@ def is_point_on_screen(point, screenWidth, screenHeight):
 def render_dynamic_ground(camera_pos, yaw, pitch, screenWidth, screenHeight, fov):
     '''Render the ground squares that are visible to the camera'''
     drawn_squares = 0
-    view_distance = grid_size  
+    view_distance = render_distance  
     
-    num_squares_half_width = view_distance // square_size  
+    num_squares_half_width = view_distance // face_size  
 
-    start_x = (camera_pos[0] // square_size) * square_size - num_squares_half_width * square_size
-    end_x = start_x + 2 * num_squares_half_width * square_size
-    start_z = (camera_pos[2] // square_size) * square_size - num_squares_half_width * square_size
-    end_z = start_z + 2 * num_squares_half_width * square_size
+    start_x = (camera_pos[0] // face_size) * face_size - num_squares_half_width * face_size
+    end_x = start_x + 2 * num_squares_half_width * face_size
+    start_z = (camera_pos[2] // face_size) * face_size - num_squares_half_width * face_size
+    end_z = start_z + 2 * num_squares_half_width * face_size
     
-    for x in range(int(start_x), int(end_x) + 1, square_size):
-        for z in range(int(start_z), int(end_z) + 1, square_size):
+    for x in range(int(start_x), int(end_x) + 1, face_size):
+        for z in range(int(start_z), int(end_z) + 1, face_size):
             square_corners = [
                 (x, 0, z),
-                (x + square_size, 0, z),
-                (x + square_size, 0, z + square_size),
-                (x, 0, z + square_size)
+                (x + face_size, 0, z),
+                (x + face_size, 0, z + face_size),
+                (x, 0, z + face_size)
             ]
 
             projected_corners = [transform_point(*corner, camera_pos, yaw, pitch, screenWidth, screenHeight, fov) for corner in square_corners]
@@ -136,7 +136,7 @@ def calculate_distance(camera_pos, point):
 
 def to_grid_pos(point):
     '''Round a point to the nearest grid position'''
-    return (round(point[0] / square_size) * square_size, round(point[1] / square_size) * square_size, round(point[2] / square_size) * square_size)
+    return (round(point[0] / face_size) * face_size, round(point[1] / face_size) * face_size, round(point[2] / face_size) * face_size)
 
 def render_block_faces(block_points, camera_pos, yaw, pitch, screenWidth, screenHeight, fov):
     '''Render the faces of the blocks that are visible to the camera'''
@@ -155,9 +155,9 @@ def render_block_faces(block_points, camera_pos, yaw, pitch, screenWidth, screen
 
             direction = direction_vectors[i]
             adjacent_position = (
-                block_position[0] + direction[0] * square_size,
-                block_position[1] + direction[1] * square_size,
-                block_position[2] + direction[2] * square_size
+                block_position[0] + direction[0] * face_size,
+                block_position[1] + direction[1] * face_size,
+                block_position[2] + direction[2] * face_size
             )
 
             if adjacent_position in occupied_positions:
@@ -175,7 +175,7 @@ def render_block_faces(block_points, camera_pos, yaw, pitch, screenWidth, screen
         
         view_vector = [centroid[i] - camera_pos[i] for i in range(3)]
         
-        if sum(normal[i] * view_vector[i] for i in range(3)) < 0:
+        if dot_product(normal, view_vector) < 0:
             projected_face = [transform_point(*block_points[vertex], camera_pos, yaw, pitch, screenWidth, screenHeight, fov) for vertex in [vertex + block_index * 8 for vertex in face]]
             if None not in projected_face and any(is_point_on_screen(point, screenWidth, screenHeight) for point in projected_face):
                 pygame.draw.polygon(screen, color, projected_face)
@@ -184,6 +184,9 @@ def render_block_faces(block_points, camera_pos, yaw, pitch, screenWidth, screen
     if debug:
         print(drawn_faces)
 
+def dot_product(v1, v2):
+    '''Calculate the dot product of two vectors'''
+    return sum(v1[i] * v2[i] for i in range(3))
 
 def project_3d(x, y, z, screen_width, screen_height, fov):
     if z < near_clip: 
@@ -246,8 +249,8 @@ def place_block():
     block_z = camera_pos[2] + forward_z * block_distance
     block_y = 0 
     
-    block_x = round(block_x / square_size) * square_size
-    block_z = round(block_z / square_size) * square_size
+    block_x = round(block_x / face_size) * face_size
+    block_z = round(block_z / face_size) * face_size
 
     add_cube(block_x, block_y, block_z, block_points, block_edges)
 
@@ -265,10 +268,6 @@ def move_camera(delta_x, delta_z, camera_pos, yaw):
     
     camera_pos[0] += forward_x + strafe_x
     camera_pos[2] += forward_z + strafe_z
-
-offset = len(block_points)
-block_points.extend(grid_points)
-block_edges.extend([(start + offset, end + offset) for start, end in grid_edges])
 
 running = True
 last_time = pygame.time.get_ticks()
@@ -316,8 +315,8 @@ while running:
         camera_pos[i] = lerp(camera_pos[i], target_pos[i], smooth_factor)
 
     mx, my = pygame.mouse.get_rel()
-    target_yaw -= mx * 0.001
-    target_pitch -= my * 0.001
+    target_yaw -= mx * camera_speed
+    target_pitch -= my * camera_speed
     target_pitch = max(-math.pi / 2.2, min(math.pi / 2.2, target_pitch))
 
     yaw = lerp(yaw, target_yaw, smooth_factor)
