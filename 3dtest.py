@@ -11,14 +11,13 @@ pygame.mouse.set_visible(False)
 pygame.event.set_grab(True)
 pygame.font.init() 
 
-debug = True
+debug = False
+draw_faces = True
 
 WHITE = (255, 255, 255)
 RED = (255, 0, 0)
 ground_square_color = (10, 180, 10) 
 ground_square_outline_color = (20, 150, 20)  
-
-
 
 block_points = []
 block_edges = []
@@ -32,12 +31,13 @@ yaw, pitch = 0, 0
 fov = 70
 near_clip = 100
 far_clip = render_distance
-smooth_factor = 0.5
+camera_lerp_factor = 0.3
 target_yaw, target_pitch = yaw, pitch
 target_pos = list(camera_pos)
-movement_speed = 1200
+player_movement_speed = 1200
+player_movement_smooth = 0.3
 camera_speed = 0.001
-strafe_speed = movement_speed * 0.8
+strafe_speed = player_movement_speed * 0.8
 fov_rad = 1 / math.tan(math.radians(fov) / 2)
 
 font_size = 24
@@ -118,7 +118,8 @@ def render_dynamic_ground(camera_pos, yaw, pitch, screenWidth, screenHeight, fov
             projected_corners = [transform_point(*corner, camera_pos, yaw, pitch, screenWidth, screenHeight, fov) for corner in square_corners]
             
             if None not in projected_corners and any(is_point_on_screen(point, screenWidth, screenHeight) for point in projected_corners):
-                pygame.draw.polygon(screen, ground_square_color, projected_corners)
+                if draw_faces:
+                    pygame.draw.polygon(screen, ground_square_color, projected_corners)
                 pygame.draw.polygon(screen, ground_square_outline_color, projected_corners, 1)
                 drawn_squares += 1
     if debug:
@@ -178,7 +179,8 @@ def render_block_faces(block_points, camera_pos, yaw, pitch, screenWidth, screen
         if dot_product(normal, view_vector) < 0:
             projected_face = [transform_point(*block_points[vertex], camera_pos, yaw, pitch, screenWidth, screenHeight, fov) for vertex in [vertex + block_index * 8 for vertex in face]]
             if None not in projected_face and any(is_point_on_screen(point, screenWidth, screenHeight) for point in projected_face):
-                pygame.draw.polygon(screen, color, projected_face)
+                if draw_faces:
+                    pygame.draw.polygon(screen, color, projected_face)
                 pygame.draw.polygon(screen, (0, 0, 0), projected_face, 1)
                 drawn_faces += 1
     if debug:
@@ -280,6 +282,8 @@ while running:
             place_block()
         if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
             running = False
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_f:
+            draw_faces = not draw_faces
         elif event.type == pygame.VIDEORESIZE: 
             screenWidth, screenHeight = event.size
             screen = pygame.display.set_mode((screenWidth, screenHeight), pygame.RESIZABLE)
@@ -289,17 +293,17 @@ while running:
     delta_z = 0
 
     if keys[pygame.K_w]:
-        delta_z = movement_speed * delta_time
+        delta_z = player_movement_speed * delta_time
     if keys[pygame.K_s]:
-        delta_z = -movement_speed * delta_time
+        delta_z = -player_movement_speed * delta_time
     if keys[pygame.K_a]:
         delta_x = -strafe_speed * delta_time
     if keys[pygame.K_d]:
         delta_x = strafe_speed * delta_time
     if keys[pygame.K_SPACE]:
-        target_pos[1] += movement_speed * delta_time
+        target_pos[1] += player_movement_speed * delta_time
     if keys[pygame.K_LSHIFT]:
-        target_pos[1] -= movement_speed * delta_time
+        target_pos[1] -= player_movement_speed * delta_time
         if target_pos[1] <= player_height:
             target_pos[1] = player_height
 
@@ -312,15 +316,15 @@ while running:
         move_camera(delta_x, delta_z, target_pos, -yaw)
     
     for i in range(3):
-        camera_pos[i] = lerp(camera_pos[i], target_pos[i], smooth_factor)
+        camera_pos[i] = lerp(camera_pos[i], target_pos[i], player_movement_smooth)
 
     mx, my = pygame.mouse.get_rel()
     target_yaw -= mx * camera_speed
     target_pitch -= my * camera_speed
     target_pitch = max(-math.pi / 2.2, min(math.pi / 2.2, target_pitch))
 
-    yaw = lerp(yaw, target_yaw, smooth_factor)
-    pitch = lerp(pitch, target_pitch, smooth_factor)
+    yaw = lerp(yaw, target_yaw, camera_lerp_factor)
+    pitch = lerp(pitch, target_pitch, camera_lerp_factor)
 
     screen.fill((135, 206, 235))
     render_dynamic_ground(camera_pos, yaw, pitch, screenWidth, screenHeight, fov) 
