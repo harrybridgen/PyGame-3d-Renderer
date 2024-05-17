@@ -11,7 +11,7 @@ pygame.mouse.set_visible(False)
 pygame.event.set_grab(True)
 pygame.font.init() 
 
-debug = True
+debug = False
 
 WHITE = (255, 255, 255)
 RED = (255, 0, 0)
