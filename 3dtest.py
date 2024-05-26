@@ -16,12 +16,13 @@ draw_faces = False
 
 WHITE = (255, 255, 255)
 RED = (255, 0, 0)
+
 ground_square_color = (10, 180, 10) 
 ground_square_outline_color = (20, 150, 20)  
 
 block_points = []
 block_edges = []
-render_distance = 3000 
+render_distance = 4000 
 face_size = 200
 
 occupied_positions = set()
@@ -31,11 +32,11 @@ yaw, pitch = 0, 0
 fov = 70
 near_clip = 100
 far_clip = render_distance
-camera_lerp_factor = 0.3
+camera_lerp_factor = 0.5
 target_yaw, target_pitch = yaw, pitch
 target_pos = list(camera_pos)
 player_movement_speed = 1200
-player_movement_smooth = 0.3
+player_movement_smooth = 0.5
 camera_speed = 0.001
 strafe_speed = player_movement_speed * 0.8
 fov_rad = 1 / math.tan(math.radians(fov) / 2)
@@ -190,7 +191,47 @@ def dot_product(v1, v2):
     '''Calculate the dot product of two vectors'''
     return sum(v1[i] * v2[i] for i in range(3))
 
-def project_3d(x, y, z, screen_width, screen_height, fov):
+def cross_product(v1, v2):
+    '''Calculate the cross product of two vectors'''
+    return (
+        v1[1] * v2[2] - v1[2] * v2[1],
+        v1[2] * v2[0] - v1[0] * v2[2],
+        v1[0] * v2[1] - v1[1] * v2[0]
+    )
+
+def transform_point(x, y, z, camera_pos, yaw, pitch, screenWidth, screenHeight, fov):
+    '''Transform a 3D point to 2D screen coordinates'''
+    x, y, z = to_camera_space(x, y, z, camera_pos)
+    x, z = rotate_yaw(x, z, yaw)
+    y, z = rotate_pitch(y, z, pitch)
+    return to_screen_space(x, y, z, screenWidth, screenHeight, fov)
+
+def to_camera_space(x, y, z, camera_pos):
+    '''Convert point to camera space'''
+    x -= camera_pos[0]
+    y -= camera_pos[1]
+    z -= camera_pos[2]
+    return x, y, z
+
+def rotate_yaw(x, z, yaw):
+    '''Rotate the point around the yaw axis'''
+    cos_yaw = math.cos(yaw)
+    sin_yaw = math.sin(yaw)
+    
+    new_x = cos_yaw * x + sin_yaw * z
+    new_z = cos_yaw * z - sin_yaw * x
+    return new_x, new_z
+
+def rotate_pitch(y, z, pitch):
+    '''Rotate the point around the pitch axis'''
+    cos_pitch = math.cos(pitch)
+    sin_pitch = math.sin(pitch)
+    
+    new_y = cos_pitch * y - sin_pitch * z
+    new_z = cos_pitch * z + sin_pitch * y
+    return new_y, new_z
+
+def to_screen_space(x, y, z, screen_width, screen_height, fov):
     if z < near_clip: 
         return None
     
@@ -208,38 +249,6 @@ def project_3d(x, y, z, screen_width, screen_height, fov):
 
     return int(x_screen), int(y_screen)
 
-
-def cross_product(v1, v2):
-    '''Calculate the cross product of two vectors'''
-    return (
-        v1[1] * v2[2] - v1[2] * v2[1],
-        v1[2] * v2[0] - v1[0] * v2[2],
-        v1[0] * v2[1] - v1[1] * v2[0]
-    )
-
-def transform_point(x, y, z, camera_pos, yaw, pitch, screenWidth, screenHeight, fov):
-    '''Transform a 3D point to 2D screen coordinates'''
-    x -= camera_pos[0]
-    y -= camera_pos[1]
-    z -= camera_pos[2]
-    
-    cos_yaw = math.cos(yaw)
-    sin_yaw = math.sin(yaw)
-    
-    temp_xz = cos_yaw * x + sin_yaw * z
-    temp_xy = cos_yaw * z - sin_yaw * x
-    x = temp_xz
-    z = temp_xy
-
-    cos_pitch = math.cos(pitch)
-    sin_pitch = math.sin(pitch)
-    
-    temp_yz = cos_pitch * y - sin_pitch * z
-    temp_yx = cos_pitch * z + sin_pitch * y
-    y = temp_yz
-    z = temp_yx
-    
-    return project_3d(x, y, z, screenWidth, screenHeight, fov)
 
 def place_block():
     '''Place a block in front of the camera'''
