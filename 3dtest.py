@@ -12,7 +12,7 @@ pygame.event.set_grab(True)
 pygame.font.init() 
 
 debug = False
-draw_faces = True
+draw_faces = False
 
 WHITE = (255, 255, 255)
 RED = (255, 0, 0)
