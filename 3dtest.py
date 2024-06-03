@@ -2,9 +2,11 @@ import pygame
 import math
 
 pygame.init()
-screenWidth = 1600
-screenHeight = screenWidth // 16 * 9
-screen = pygame.display.set_mode((screenWidth, screenHeight), pygame.RESIZABLE)
+
+screen_width = 1600
+screen_height = screen_width // 16 * 9
+
+screen = pygame.display.set_mode((screen_width, screen_height), pygame.RESIZABLE)
 pygame.display.set_caption("3D Test")
 clock = pygame.time.Clock()
 pygame.mouse.set_visible(False)
@@ -91,11 +93,11 @@ def add_cube(base_x, base_y, base_z, block_points, block_edges, size=200):
 
     occupied_positions.add(cube_position_key)
 
-def is_point_on_screen(point, screenWidth, screenHeight):
+def is_point_on_screen(point, screen_width, screen_height):
     tolerance = 50
-    return -tolerance <= point[0] <= screenWidth + tolerance and -tolerance <= point[1] <= screenHeight + tolerance
+    return -tolerance <= point[0] <= screen_width + tolerance and -tolerance <= point[1] <= screen_height + tolerance
 
-def render_dynamic_ground(camera_pos, yaw, pitch, screenWidth, screenHeight, fov):
+def render_dynamic_ground(camera_pos, yaw, pitch, screen_width, screen_height, fov_rad):
     '''Render the ground squares that are visible to the camera'''
     drawn_squares = 0
     view_distance = render_distance  
@@ -116,9 +118,9 @@ def render_dynamic_ground(camera_pos, yaw, pitch, screenWidth, screenHeight, fov
                 (x, 0, z + face_size)
             ]
 
-            projected_corners = [transform_point(*corner, camera_pos, yaw, pitch, screenWidth, screenHeight, fov) for corner in square_corners]
+            projected_corners = [transform_point(*corner, camera_pos, yaw, pitch, screen_width, screen_height, fov_rad) for corner in square_corners]
             
-            if None not in projected_corners and any(is_point_on_screen(point, screenWidth, screenHeight) for point in projected_corners):
+            if None not in projected_corners and any(is_point_on_screen(point, screen_width, screen_height) for point in projected_corners):
                 if draw_faces:
                     pygame.draw.polygon(screen, ground_square_color, projected_corners)
                 pygame.draw.polygon(screen, ground_square_outline_color, projected_corners, 1)
@@ -140,7 +142,7 @@ def to_grid_pos(point):
     '''Round a point to the nearest grid position'''
     return (round(point[0] / face_size) * face_size, round(point[1] / face_size) * face_size, round(point[2] / face_size) * face_size)
 
-def render_block_faces(block_points, camera_pos, yaw, pitch, screenWidth, screenHeight, fov):
+def render_block_faces(block_points, camera_pos, yaw, pitch, screen_width, screen_height, fov_rad):
     '''Render the faces of the blocks that are visible to the camera'''
     drawn_faces = 0
     faces_with_details = []
@@ -178,8 +180,8 @@ def render_block_faces(block_points, camera_pos, yaw, pitch, screenWidth, screen
         view_vector = [centroid[i] - camera_pos[i] for i in range(3)]
         
         if dot_product(normal, view_vector) < 0:
-            projected_face = [transform_point(*block_points[vertex], camera_pos, yaw, pitch, screenWidth, screenHeight, fov) for vertex in [vertex + block_index * 8 for vertex in face]]
-            if None not in projected_face and any(is_point_on_screen(point, screenWidth, screenHeight) for point in projected_face):
+            projected_face = [transform_point(*block_points[vertex], camera_pos, yaw, pitch, screen_width, screen_height, fov_rad) for vertex in [vertex + block_index * 8 for vertex in face]]
+            if None not in projected_face and any(is_point_on_screen(point, screen_width, screen_height) for point in projected_face):
                 if draw_faces:
                     pygame.draw.polygon(screen, color, projected_face)
                 pygame.draw.polygon(screen, (0, 0, 0), projected_face, 1)
@@ -199,12 +201,40 @@ def cross_product(v1, v2):
         v1[0] * v2[1] - v1[1] * v2[0]
     )
 
-def transform_point(x, y, z, camera_pos, yaw, pitch, screenWidth, screenHeight, fov):
+def transform_point(x, y, z, camera_pos, yaw, pitch, screen_width, screen_height, fov_rad):
     '''Transform a 3D point to 2D screen coordinates'''
     x, y, z = to_camera_space(x, y, z, camera_pos)
     x, z = rotate_yaw(x, z, yaw)
     y, z = rotate_pitch(y, z, pitch)
-    return to_screen_space(x, y, z, screenWidth, screenHeight, fov)
+
+    if near_clip_z(z) or far_clip_z(z):
+        return None
+    
+    x_screen, y_screen = project_to_screen(x, y, z, screen_width, screen_height, fov_rad)
+
+    return int(x_screen), int(y_screen)
+
+def project_to_screen(x, y, z,screen_width, screen_height, fov_rad):
+    '''Project a 3D point to 2D screen coordinates'''
+    x_proj = (fov_rad * x) / z
+    y_proj = (fov_rad * y) / z
+    
+    x_proj *= (screen_height / screen_width)
+    
+    x_screen = (x_proj + 1) * screen_width / 2
+    y_screen = (1 - y_proj) * screen_height / 2
+
+    return int(x_screen), int(y_screen)
+
+def near_clip_z(z):
+    if z < near_clip:
+        return True
+    return False
+
+def far_clip_z(z):
+    if z > far_clip: 
+        return True
+    return False
 
 def to_camera_space(x, y, z, camera_pos):
     '''Convert point to camera space'''
@@ -231,24 +261,6 @@ def rotate_pitch(y, z, pitch):
     new_z = cos_pitch * z + sin_pitch * y
     return new_y, new_z
 
-def to_screen_space(x, y, z, screen_width, screen_height, fov):
-    if z < near_clip: 
-        return None
-    
-    if z > far_clip:
-        return None
-    
-    x_proj = (fov_rad * x) / z
-    y_proj = (fov_rad * y) / z
-    
-
-    x_proj *= (screen_height / screen_width)
-    
-    x_screen = (x_proj + 1) * screen_width / 2
-    y_screen = (1 - y_proj) * screen_height / 2
-
-    return int(x_screen), int(y_screen)
-
 
 def place_block():
     '''Place a block in front of the camera'''
@@ -269,7 +281,7 @@ def lerp(start, end, factor):
     return start + (end - start) * factor
 
 def draw_cursor():
-    pygame.draw.circle(screen, WHITE, (screenWidth // 2, screenHeight // 2), 3)
+    pygame.draw.circle(screen, WHITE, (screen_width // 2, screen_height // 2), 3)
 
 def move_camera(delta_x, delta_z, camera_pos, yaw):
     forward_x = math.sin(yaw) * delta_z
@@ -294,8 +306,8 @@ while running:
         if event.type == pygame.KEYDOWN and event.key == pygame.K_f:
             draw_faces = not draw_faces
         elif event.type == pygame.VIDEORESIZE: 
-            screenWidth, screenHeight = event.size
-            screen = pygame.display.set_mode((screenWidth, screenHeight), pygame.RESIZABLE)
+            screen_width, screen_height = event.size
+            screen = pygame.display.set_mode((screen_width, screen_height), pygame.RESIZABLE)
 
     keys = pygame.key.get_pressed()
     delta_x = 0
@@ -336,8 +348,8 @@ while running:
     pitch = lerp(pitch, target_pitch, camera_lerp_factor)
 
     screen.fill((135, 206, 235))
-    render_dynamic_ground(camera_pos, yaw, pitch, screenWidth, screenHeight, fov) 
-    render_block_faces(block_points, camera_pos, yaw, pitch, screenWidth, screenHeight, fov)
+    render_dynamic_ground(camera_pos, yaw, pitch, screen_width, screen_height, fov_rad) 
+    render_block_faces(block_points, camera_pos, yaw, pitch, screen_width, screen_height, fov_rad)
 
     fps = clock.get_fps()
     fps_text = font.render(f"FPS: {fps:.2f}", True, RED)
