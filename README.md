@@ -1,4 +1,4 @@
-<iframe width="560" height="315" src="https://www.youtube.com/embed/y7Pkr4E4Nlk" frameborder="0" allowfullscreen></iframe>
+[![Watch the demo](https://img.youtube.com/vi/y7Pkr4E4Nlk/0.jpg)](https://youtu.be/y7Pkr4E4Nlk)
 
 ---
 # Software 3D Block Renderer
