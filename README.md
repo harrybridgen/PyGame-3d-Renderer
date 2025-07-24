@@ -1,6 +1,6 @@
 [Youtube Demo](https://youtu.be/y7Pkr4E4Nlk)
 
-![blocks](blocks.img)
+![blocks](blocks.JPG)
 
 ---
 # Software 3D Block Renderer
