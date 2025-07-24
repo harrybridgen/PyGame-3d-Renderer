@@ -1,4 +1,4 @@
-[![Watch the demo](https://img.youtube.com/vi/y7Pkr4E4Nlk/0.jpg)](https://youtu.be/y7Pkr4E4Nlk)
+[Youtube Demo](https://youtu.be/y7Pkr4E4Nlk)
 
 ---
 # Software 3D Block Renderer
